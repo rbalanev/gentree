@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from openpyxl import Workbook, load_workbook
 from typing import List, Optional
 
@@ -31,8 +32,19 @@ def _row_to_member(row: list) -> Optional[Member]:
     """Convert an openpyxl row to a Member dict."""
     try:
         row_id = int(row[0])
-        birth_year = int(row[3]) if row[3] else None
-        gender = row[4]
+        # Handle both datetime objects and plain integers for birth_year
+        by = row[3]
+        if by is None:
+            birth_year = None
+        elif isinstance(by, datetime):
+            birth_year = by.year
+        else:
+            birth_year = int(by)
+        # Normalize gender to lowercase
+        gender_raw = str(row[4]).lower() if row[4] else None
+        # Validate gender against enum values
+        if gender_raw not in ("male", "female"):
+            return None
         father_id = int(row[5]) if row[5] else None
         mother_id = int(row[6]) if row[6] else None
         notes = row[7] if row[7] else None
@@ -41,7 +53,7 @@ def _row_to_member(row: list) -> Optional[Member]:
             name=str(row[1]),
             surname=str(row[2]),
             birth_year=birth_year,
-            gender=gender,
+            gender=gender_raw,
             father_id=father_id,
             mother_id=mother_id,
             notes=notes,
@@ -152,29 +164,27 @@ def delete_member(member_id: int) -> bool:
     ws = wb.active
 
     # First, clear references to this member in other rows
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        row_data = list(row)
-        needs_update = False
-        if row_data[5] == member_id:  # father_id
-            ws.cell(row=row[0], column=6, value=None)
-            needs_update = True
-        if row_data[6] == member_id:  # mother_id
-            ws.cell(row=row[0], column=7, value=None)
-            needs_update = True
-        if needs_update:
-            pass  # Will save at the end
+    for row_idx in range(2, ws.max_row + 1):
+        father_id = ws.cell(row=row_idx, column=6).value
+        mother_id = ws.cell(row=row_idx, column=7).value
+        if father_id == member_id:
+            ws.cell(row=row_idx, column=6, value=None)
+        if mother_id == member_id:
+            ws.cell(row=row_idx, column=7, value=None)
 
     # Now delete the row
     deleted = False
-    rows_to_delete = []
-    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        member = _row_to_member(list(row))
+    for row_idx in range(2, ws.max_row + 1):
+        member = get_member_by_id(ws.cell(row=row_idx, column=1).value)
         if member and member.id == member_id:
             ws.delete_rows(row_idx)
             deleted = True
             break
 
-    if deleted:
+    if deleted or any(
+        ws.cell(row=r, column=6).value == member_id or ws.cell(row=r, column=7).value == member_id
+        for r in range(2, ws.max_row + 1)
+    ):
         _save_workbook(wb)
     wb.close()
     return deleted
