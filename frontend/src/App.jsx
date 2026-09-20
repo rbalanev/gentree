@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMembers } from './hooks/useMembers'
 import Header from './components/Header'
 import MemberList from './components/MemberList'
@@ -9,6 +9,14 @@ function App() {
   const { members, loading, error, refetch } = useMembers()
   const [showForm, setShowForm] = useState(false)
   const [editingMember, setEditingMember] = useState(null)
+
+  // Auto-refresh every 5 seconds to detect external changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetch()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [refetch])
 
   const handleAdd = () => {
     setEditingMember(null)

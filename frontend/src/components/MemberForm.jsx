@@ -6,9 +6,12 @@ export default function MemberForm({ member, allMembers, onClose }) {
     name: '',
     surname: '',
     birth_year: '',
+    birth_day: '',
+    birth_month: '',
     gender: 'male',
     father_id: '',
     mother_id: '',
+    child_ids: [],
     notes: '',
   })
   const [saving, setSaving] = useState(false)
@@ -16,13 +19,17 @@ export default function MemberForm({ member, allMembers, onClose }) {
 
   useEffect(() => {
     if (member) {
+      const by = member.birth_year || ''
       setForm({
         name: member.name,
         surname: member.surname,
-        birth_year: member.birth_year ?? '',
+        birth_year: by ? by.toString().slice(0, 4) : '',
+        birth_day: '',
+        birth_month: '',
         gender: member.gender,
         father_id: member.father_id ?? '',
         mother_id: member.mother_id ?? '',
+        child_ids: [],
         notes: member.notes ?? '',
       })
     }
@@ -33,15 +40,28 @@ export default function MemberForm({ member, allMembers, onClose }) {
     setForm((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handleChildToggle = (childId) => {
+    setForm((prev) => {
+      const ids = prev.child_ids.includes(childId)
+        ? prev.child_ids.filter((id) => id !== childId)
+        : [...prev.child_ids, childId]
+      return { ...prev, child_ids: ids }
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    e.stopPropagation()
     setSaving(true)
     setSaved(false)
     const payload = {
-      ...form,
+      name: form.name,
+      surname: form.surname,
       birth_year: form.birth_year ? parseInt(form.birth_year) : null,
+      gender: form.gender,
       father_id: form.father_id ? parseInt(form.father_id) : null,
       mother_id: form.mother_id ? parseInt(form.mother_id) : null,
+      notes: form.notes,
     }
 
     try {
@@ -49,6 +69,29 @@ export default function MemberForm({ member, allMembers, onClose }) {
         await updateMember(member.id, payload)
       } else {
         await createMember(payload)
+      }
+      // Update children links if any
+      if (form.child_ids.length > 0) {
+        for (const childId of form.child_ids) {
+          const child = allMembers.find((m) => m.id === childId)
+          if (child) {
+            // Determine if this member is father or mother based on gender
+            const updateData = {
+              gender: form.gender,
+            }
+            if (form.gender === 'male') {
+              updateData.father_id = member ? member.id : null
+            } else {
+              updateData.mother_id = member ? member.id : null
+            }
+            // Only update if not already set
+            if (form.gender === 'male' && !child.father_id) {
+              await updateMember(childId, { ...updateData })
+            } else if (form.gender === 'female' && !child.mother_id) {
+              await updateMember(childId, { ...updateData })
+            }
+          }
+        }
       }
       setSaved(true)
       setTimeout(() => onClose(), 800)
@@ -60,9 +103,17 @@ export default function MemberForm({ member, allMembers, onClose }) {
   }
 
   const parentOptions = allMembers.filter((m) => m.id !== member?.id)
+  // Children options: members who don't have this parent yet
+  const childOptions = allMembers.filter(
+    (m) =>
+      m.id !== member?.id &&
+      !member &&
+      (!m.father_id || m.father_id !== null) &&
+      (!m.mother_id || m.mother_id !== null)
+  )
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onContextMenu={(e) => e.preventDefault()}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{member ? 'Редактировать участника' : 'Добавить участника'}</h2>
         <form onSubmit={handleSubmit}>
@@ -74,16 +125,20 @@ export default function MemberForm({ member, allMembers, onClose }) {
             <label>Фамилия *</label>
             <input name="surname" value={form.surname} onChange={handleChange} required />
           </div>
-          <div className="form-row">
+          <div className="form-row form-row-date">
             <label>Год рождения</label>
-            <input
-              name="birth_year"
-              type="number"
-              min="1700"
-              max="2030"
-              value={form.birth_year}
-              onChange={handleChange}
-            />
+            <div className="date-row">
+              <input
+                name="birth_year"
+                type="number"
+                placeholder="Год"
+                min="1700"
+                max="2030"
+                value={form.birth_year}
+                onChange={handleChange}
+                className="date-input year"
+              />
+            </div>
           </div>
           <div className="form-row">
             <label>Пол *</label>
@@ -114,6 +169,44 @@ export default function MemberForm({ member, allMembers, onClose }) {
               ))}
             </select>
           </div>
+          {!member && form.child_ids.length > 0 && (
+            <div className="form-row">
+              <label>Дети (будут привязаны к этому участнику)</label>
+              <div className="child-checks">
+                {allMembers
+                  .filter((m) => m.id !== member?.id && !form.child_ids.includes(m.id))
+                  .map((m) => (
+                    <label key={m.id} className="child-check">
+                      <input
+                        type="checkbox"
+                        checked={form.child_ids.includes(m.id)}
+                        onChange={() => handleChildToggle(m.id)}
+                      />
+                      {m.name} {m.surname}
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
+          {member && form.child_ids.length > 0 && (
+            <div className="form-row">
+              <label>Дети (будут привязаны к этому участнику)</label>
+              <div className="child-checks">
+                {allMembers
+                  .filter((m) => m.id !== member?.id && !form.child_ids.includes(m.id))
+                  .map((m) => (
+                    <label key={m.id} className="child-check">
+                      <input
+                        type="checkbox"
+                        checked={form.child_ids.includes(m.id)}
+                        onChange={() => handleChildToggle(m.id)}
+                      />
+                      {m.name} {m.surname}
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
           <div className="form-row">
             <label>Заметки</label>
             <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} />

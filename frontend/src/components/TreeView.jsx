@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import ReactFlow, { Controls, Background, MarkerType } from 'reactflow'
 import PersonNode from './PersonNode'
+import { updateMember } from '../api'
 import 'reactflow/dist/style.css'
 
 const nodeTypes = { person: PersonNode }
@@ -174,10 +175,34 @@ function computeTreeLayout(members) {
 }
 
 export default function TreeView({ members, loading }) {
+  const [connected, setConnected] = useState({ nodes: [], edges: [] })
+
   const { nodes, edges } = useMemo(() => {
     if (!members || members.length === 0) return { nodes: [], edges: [] }
     return computeTreeLayout(members)
   }, [members])
+
+  const onConnect = async (params) => {
+    const sourceId = parseInt(params.source)
+    const targetId = parseInt(params.target)
+    const sourceNode = members.find((m) => m.id === sourceId)
+    const targetNode = members.find((m) => m.id === targetId)
+
+    if (!sourceNode || !targetNode) return
+
+    try {
+      // Determine if source is father or mother
+      const updateData = {}
+      if (sourceNode.gender === 'male') {
+        updateData.father_id = sourceId
+      } else {
+        updateData.mother_id = sourceId
+      }
+      await updateMember(targetId, updateData)
+    } catch (err) {
+      alert('Ошибка при создании связи: ' + (err.response?.data?.detail || err.message))
+    }
+  }
 
   if (loading) return <div className="tree-view">Загрузка...</div>
   if (members.length === 0)
@@ -185,7 +210,19 @@ export default function TreeView({ members, loading }) {
 
   return (
     <div className="tree-view">
-      <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        onConnect={onConnect}
+        connectOnDrag
+        connectionRadius={100}
+        defaultEdgeOptions={{
+          markerEnd: MarkerType.Arrow,
+          style: { strokeWidth: 2 },
+        }}
+      >
         <Controls />
         <Background />
       </ReactFlow>

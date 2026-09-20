@@ -271,6 +271,52 @@ body {
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+/* Date input styling */
+.form-row-date .date-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-row-date .date-input {
+  flex: 1;
+}
+
+.form-row-date .date-input.year {
+  flex: 1;
+}
+
+/* Child checkboxes */
+.child-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.child-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+.child-check:hover {
+  background: #f0f0f0;
+}
+
+.child-check input[type="checkbox"] {
+  width: auto;
+  cursor: pointer;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
