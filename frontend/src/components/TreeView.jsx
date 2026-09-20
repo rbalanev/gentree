@@ -16,10 +16,18 @@ function computeTreeLayout(members) {
     childrenMap.set(m.id, [])
     if (m.father_id) {
       parentMap.set(m.id, (parentMap.get(m.id) || []).concat(m.father_id))
+      // Ensure parent exists in childrenMap before pushing
+      if (!childrenMap.has(m.father_id)) {
+        childrenMap.set(m.father_id, [])
+      }
       childrenMap.get(m.father_id).push(m)
     }
     if (m.mother_id) {
       parentMap.set(m.id, (parentMap.get(m.id) || []).concat(m.mother_id))
+      // Ensure parent exists in childrenMap before pushing
+      if (!childrenMap.has(m.mother_id)) {
+        childrenMap.set(m.mother_id, [])
+      }
       childrenMap.get(m.mother_id).push(m)
     }
   })
