@@ -11,6 +11,8 @@ export default function MemberForm({ member, allMembers, onClose }) {
     mother_id: '',
     notes: '',
   })
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (member) {
@@ -33,6 +35,8 @@ export default function MemberForm({ member, allMembers, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSaving(true)
+    setSaved(false)
     const payload = {
       ...form,
       birth_year: form.birth_year ? parseInt(form.birth_year) : null,
@@ -46,9 +50,12 @@ export default function MemberForm({ member, allMembers, onClose }) {
       } else {
         await createMember(payload)
       }
-      onClose()
+      setSaved(true)
+      setTimeout(() => onClose(), 800)
     } catch (err) {
       alert('Ошибка при сохранении: ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -112,10 +119,12 @@ export default function MemberForm({ member, allMembers, onClose }) {
             <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} />
           </div>
           <div className="form-actions">
-            <button type="button" onClick={onClose}>
+            <button type="button" onClick={onClose} disabled={saving}>
               Отмена
             </button>
-            <button type="submit">{member ? 'Сохранить' : 'Добавить'}</button>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Сохранение...' : saved ? '✓ Сохранено!' : 'Сохранить'}
+            </button>
           </div>
         </form>
       </div>

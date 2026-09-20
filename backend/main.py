@@ -1,9 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from routes.members import router as members_router
 from database import init_db
 
-app = FastAPI(title="Heritage -- Family Tree Portal", version="0.0.1a")
+app = FastAPI(title="Heritage -- Family Tree Portal", version="0.0.1_build_009")
+
+# Root endpoint
+@app.get("/")
+def root():
+    return {"message": "Heritage Family Tree Portal API", "version": "0.0.1_build_009", "docs": "/docs"}
 
 # CORS: allow frontend dev server (port 5173 with Vite)
 app.add_middleware(

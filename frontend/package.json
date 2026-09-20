@@ -1,7 +1,7 @@
 {
   "name": "heritage-frontend",
   "private": true,
-  "version": "0.0.1a",
+  "version": "0.0.1_build_009",
   "type": "module",
   "scripts": {
     "dev": "vite",

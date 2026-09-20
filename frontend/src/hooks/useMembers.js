@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import * as api from './api'
+import * as api from '../api'
 
 export function useMembers() {
   const [members, setMembers] = useState([])
